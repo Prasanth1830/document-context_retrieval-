@@ -16,10 +16,10 @@ load_dotenv(override=True)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("document-retrieval-system")
+logger = logging.getLogger("document-context-retrieval-system")
 
 # Initialize FastAPI
-app = FastAPI(title="Document Data Retrieval System")
+app = FastAPI(title="Document Context Retrieval System")
 
 # Configure CORS
 app.add_middleware(
@@ -278,7 +278,7 @@ def query_document(request: QueryRequest):
         ])
         
         system_prompt = (
-            "You are a strictly grounded document data retrieval AI assistant. "
+            "You are a strictly grounded document context retrieval AI assistant. "
             "Your task is to answer the user's question using ONLY the provided document context.\n\n"
             "Strict Rules:\n"
             "1. Base your answer solely on the provided contexts. Do not assume, generalize, or extrapolate.\n"

@@ -10,7 +10,7 @@ class TestRAGEngine(unittest.TestCase):
 
     def test_chunking_overlap_preservation(self):
         text = "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10"
-        # We specify a small chunk size to trigger splits
+        # Specify a small chunk size to trigger splits
         chunks = chunk_text(text, chunk_size=20, overlap=10)
         self.assertTrue(len(chunks) > 1)
         # Check that some words exist in multiple chunks (overlap)
@@ -25,7 +25,7 @@ class TestRAGEngine(unittest.TestCase):
         context_str = "[Source: prasanth_notes.pdf, Page: 3]\nPrasanth's notes explicitly detail that 2+2 equals 5."
         
         system_prompt = (
-            "You are a strictly grounded document data retrieval AI assistant. "
+            "You are a strictly grounded document context retrieval AI assistant. "
             "Your task is to answer the user's question using ONLY the provided document context.\n\n"
             "Strict Rules:\n"
             "1. Base your answer solely on the provided contexts. Do not assume, generalize, or extrapolate.\n"

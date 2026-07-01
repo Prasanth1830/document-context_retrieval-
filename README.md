@@ -1,6 +1,6 @@
-# Document Data Retrieval System (NotebookLM Clone)
+# Document Context Retrieval System
 
-An enterprise-grade, highly grounded, and medically compliant **Document Data Retrieval System** (NotebookLM clone). This system ingests PDF documents, processes and embeds their contents into a secure Pinecone vector database, and utilizes a Large Language Model (LLM) strictly as a retrieval and synthesis engine. 
+An enterprise-grade, highly grounded, and medically compliant **Document Context Retrieval System**. This system ingests PDF documents, processes and embeds their contents into a secure Pinecone vector database, and utilizes a Large Language Model (LLM) strictly as a retrieval and synthesis engine. 
 
 Designed for high-trust environments (like healthcare and finance), the system guarantees **zero hallucination** by strictly grounding its answers in the source PDFs, backed by automated evaluation scores (Ragas) and robust compliance controls.
 
@@ -59,7 +59,7 @@ The AI system rejects external assumptions. Even if asked general knowledge or c
 
 ## 3. Evaluation & Scoring System (Ragas Framework)
 
-To guarantee the reliability of the retriever and synthesis engine, we integrate **Ragas** (Retrieval Augmented Generation Assessment) directly into our CI/CD pipeline.
+To guarantee the reliability of the retriever and synthesis engine, I integrate **Ragas** (Retrieval Augmented Generation Assessment) directly into my CI/CD pipeline.
 
 ![RAG Evaluation Dashboard](assets/images/5_eval_dashboard.png)
 
@@ -81,7 +81,7 @@ To guarantee the reliability of the retriever and synthesis engine, we integrate
 
 ## 4. Strict Grounding & Fallback Queries
 
-We enforce a **Strict Grounding Contract**. Below is the live query history demonstrating how the system answers, falls back, and cites sources:
+I enforce a **Strict Grounding Contract**. Below is the live query history demonstrating how the system answers, falls back, and cites sources:
 
 *   **Q1: What evidence does the document provide about the growth of digital finance?**
     *   **AI:** Global financial account ownership increased from 51% in 2011 to 76% in 2021. `[Source: Brief-Summary.pdf, Page 1]`
@@ -96,16 +96,31 @@ We enforce a **Strict Grounding Contract**. Below is the live query history demo
 
 ## 5. Compliance & Security Framework (HIPAA & SOC 2)
 
-Our system implements a simple, medical-grade compliance and governance architecture:
+To ensure this system is safe for highly regulated industries (like healthcare and finance), my architecture includes standard compliance and security features:
 
-*   **AI Governance Layer:**
-    *   **Learn / Unlearn Panels:** Admins can actively add or purge vectors from Pinecone (supporting GDPR's Right to be Forgotten).
-    *   **Orchestration Guardrails:** Restricts the AI agent from extrapolating beyond the retrieved PDF contexts.
-    *   **Weight of Consequences:** Gated checks that block and flag any answers with low Faithfulness scores.
-*   **Human-in-the-Loop & Fallback:**
-    *   **Human KT Panels:** clinical experts verify, correct, and update AI answers as training ground truths.
-    *   **Fallback Tracking:** Logs queries returning missing context to isolate gaps in your knowledge base.
-*   **Compliance Implementations:**
-    *   **HIPAA:** Local PHI de-identification before embedding, signed BAAs, and AES-256 encryption.
-    *   **SOC 2:** Row-Level Security (RLS) filtering by `tenant_id` in Pinecone, and deployment inside secure VPCs.
+*   **HIPAA Compliance (Healthcare Data Protection):**
+    *   **What it does:** It automatically removes or masks patient-identifiable information (PHI) before documents are processed, encrypts files at rest using AES-256, and ensures all API connections are fully encrypted.
+    *   **Why it matters:** It keeps patient health records private, secure, and fully compliant with medical data regulations.
+*   **SOC 2 Compliance (Security and Data Isolation):**
+    *   **What it does:** It isolates user documents using Row-Level Security (meaning different users or organizations can never access each other's data) and runs the entire application inside a secure Virtual Private Cloud (VPC).
+    *   **Why it matters:** It guarantees that your business data is completely segregated, monitored, and protected from unauthorized access.
+
+---
+
+## 6. Future Scalability Architecture
+
+To support bursts of concurrent traffic (e.g., 50+ simultaneous users) without hitting provider rate limits or system slowdowns, I have planned three direct scalability strategies that can be layered on top of this architecture:
+
+### 1. API Key Rotation (Handling Provider Rate Limits)
+* **How it works:** Instead of relying on a single API key, my system can maintain a pool of multiple API keys.
+* **Why it helps:** Most LLM providers restrict requests per minute (RPM). By dynamically rotating through a pool of keys, the application multiplies its effective limits, ensuring that concurrent requests from different users do not cause API throttling.
+
+### 2. Smart LLM Gateways (Load Balancing & Failover)
+* **How it works:** I can route all model requests (embeddings and synthesis) through an LLM gateway (like LiteLLM). The gateway load-balances requests across different keys, regions, or even different model providers (Gemini, OpenAI, Anthropic, etc.).
+* **Why it helps:** If a primary key or region gets throttled, the gateway automatically handles retries with exponential backoff and fails over to another active key or provider instantly, guaranteeing zero downtime.
+
+### 3. Horizontal Scaling & Asynchronous Queuing (Smoothing Traffic Spikes)
+* **How it works:** I can decouple the web interface from the heavy retrieval/generation engine. Incoming questions are placed into a lightweight queue (e.g., Redis Queue or Celery), which are then picked up and processed by multiple parallel workers.
+* **Why it helps:** Instead of the system being overwhelmed by sudden traffic spikes, requests are organized in a queue and processed smoothly. I can scale the number of background workers up or down dynamically depending on active usage.
+
 
