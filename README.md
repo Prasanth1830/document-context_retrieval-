@@ -122,5 +122,3 @@ To support bursts of concurrent traffic (e.g., 50+ simultaneous users) without h
 ### 3. Horizontal Scaling & Asynchronous Queuing (Smoothing Traffic Spikes)
 * **How it works:** I can decouple the web interface from the heavy retrieval/generation engine. Incoming questions are placed into a lightweight queue (e.g., Redis Queue or Celery), which are then picked up and processed by multiple parallel workers.
 * **Why it helps:** Instead of the system being overwhelmed by sudden traffic spikes, requests are organized in a queue and processed smoothly. I can scale the number of background workers up or down dynamically depending on active usage.
-
-

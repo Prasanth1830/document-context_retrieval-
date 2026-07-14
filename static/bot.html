@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Context Retrieval</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Top Navbar -->
+        <header class="app-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-brain-circuit nav-logo-icon"></i>
+                <h1>Document Context Retrieval</h1>
+            </div>
+            <div class="config-status-badge" id="config-status-badge">
+                <span class="status-dot warning"></span>
+                <span class="status-text" id="status-text">Checking Service Status...</span>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- Left Sidebar - Sources & Files -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h2 class="section-title"><i class="fa-solid fa-folder-open"></i> Sources</h2>
+
+                    <!-- File Upload Box -->
+                    <div class="upload-container" id="drop-zone">
+                        <input type="file" id="file-input" accept=".pdf" style="display: none;">
+                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-main-text">Drag & drop PDF here</p>
+                        <p class="upload-sub-text">or click to browse</p>
+                        <div class="upload-progress-container" id="upload-progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="upload-progress-fill"></div>
+                            </div>
+                            <span class="progress-text" id="upload-progress-text">Processing PDF...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section files-section">
+                    <h3 class="subsection-title">Loaded Documents</h3>
+                    <ul class="file-list" id="file-list">
+                        <li class="empty-list-placeholder">No documents uploaded yet.</li>
+                    </ul>
+                </div>
+
+                <div class="sidebar-footer">
+                    <button class="btn btn-secondary btn-block" id="btn-clear"><i class="fa-solid fa-rotate-left"></i>
+                        Reset Chat & Logs</button>
+                </div>
+            </aside>
+
+            <!-- Center Panel - Chat Q&A -->
+            <main class="chat-panel">
+                <div class="chat-header">
+                    <div class="chat-title-info">
+                        <h2>Grounded Q&A Interface</h2>
+                        <p>Responses are strictly constrained to uploaded document facts</p>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message system">
+                        <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                        <div class="message-content">
+                            <p>Welcome! Upload your PDF documents in the left panel. Once embedded, you can query their
+                                contents. The system will retrieve context directly from the PDF, cite the exact source
+                                page, and show retrieval traces.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="input-container">
+                        <input type="text" id="chat-input" placeholder="Ask a question about the document context..."
+                            autocomplete="off" disabled>
+                        <button id="btn-send" class="btn-send" disabled><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar - Ragas Evaluation -->
+            <aside class="eval-panel">
+                <div class="eval-header">
+                    <h2><i class="fa-solid fa-gauge-high"></i> Ragas Metrics</h2>
+                    <p>Automated QA Quality & Grounding Evaluation</p>
+                </div>
+
+                <div class="eval-scores-grid">
+                    <!-- Faithfulness -->
+                    <div class="eval-card">
+                        <div class="radial-progress-wrapper">
+                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
+                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
+                                <circle class="circle-bar" id="score-faithfulness" cx="40" cy="40" r="34"
+                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#10b981"></circle>
+                            </svg>
+                            <span class="radial-value" id="val-faithfulness">-</span>
+                        </div>
+                        <div class="eval-meta">
+                            <h4>Faithfulness</h4>
+                            <p>Anti-Hallucination</p>
+                        </div>
+                    </div>
+
+                    <!-- Answer Relevance -->
+                    <div class="eval-card">
+                        <div class="radial-progress-wrapper">
+                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
+                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
+                                <circle class="circle-bar" id="score-relevance" cx="40" cy="40" r="34"
+                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#8b5cf6"></circle>
+                            </svg>
+                            <span class="radial-value" id="val-relevance">-</span>
+                        </div>
+                        <div class="eval-meta">
+                            <h4>Relevance</h4>
+                            <p>Query Matching</p>
+                        </div>
+                    </div>
+
+                    <!-- Context Precision -->
+                    <div class="eval-card">
+                        <div class="radial-progress-wrapper">
+                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
+                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
+                                <circle class="circle-bar" id="score-precision" cx="40" cy="40" r="34"
+                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#3b82f6"></circle>
+                            </svg>
+                            <span class="radial-value" id="val-precision">-</span>
+                        </div>
+                        <div class="eval-meta">
+                            <h4>Precision</h4>
+                            <p>Retriever Accuracy</p>
+                        </div>
+                    </div>
+
+                    <!-- Context Recall -->
+                    <div class="eval-card">
+                        <div class="radial-progress-wrapper">
+                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
+                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
+                                <circle class="circle-bar" id="score-recall" cx="40" cy="40" r="34"
+                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#eab308"></circle>
+                            </svg>
+                            <span class="radial-value" id="val-recall">-</span>
+                        </div>
+                        <div class="eval-meta">
+                            <h4>Context Recall</h4>
+                            <p>Retriever Depth</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="eval-action-box">
+                    <button class="btn btn-primary btn-block" id="btn-eval" disabled>
+                        <i class="fa-solid fa-calculator"></i> Run Ragas Evaluation
+                    </button>
+                    <p class="eval-helper-text">Ragas runs LLM-as-a-judge scorers over the current chat interactions to
+                        calculate scores. Requires Gemini credit.</p>
+                </div>
+
+                <div class="eval-loading-container" id="eval-loader" style="display: none;">
+                    <div class="dots-loader">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                    <span class="eval-loader-text">Evaluating Grounding Integrity...</span>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Alert Banner for environment setup -->
+    <div id="env-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> Keys Configuration Required</h3>
+            </div>
+            <div class="modal-body">
+                <p>The system detected that your environment parameters are not configured.</p>
+                <p>Please edit the <strong>.env</strong> file in the project folder and supply valid credentials:</p>
+                <pre class="env-code-block">
+GEMINI_API_KEY=AIzaSy...
+PINECONE_API_KEY=pcsk_...
+PINECONE_ENVIRONMENT=us-east-1
+PINECONE_INDEX_NAME=document-index
+                </pre>
+                <div class="alert-box note">
+                    Once the .env file is updated, restart the server for changes to take effect.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="window.location.reload()"><i
+                        class="fa-solid fa-arrows-rotate"></i> Retry Connection</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,219 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Context Retrieval</title>
+    <title>Enterprise Document Context Retrieval</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-    <!-- FontAwesome for Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="landing.css?v=2">
 </head>
-
 <body>
-    <div class="app-container">
-        <!-- Top Navbar -->
-        <header class="app-header">
-            <div class="logo-area">
-                <i class="fa-solid fa-brain-circuit nav-logo-icon"></i>
-                <h1>Document Context Retrieval</h1>
-            </div>
-            <div class="config-status-badge" id="config-status-badge">
-                <span class="status-dot warning"></span>
-                <span class="status-text" id="status-text">Checking Service Status...</span>
-            </div>
-        </header>
-
-        <div class="main-layout">
-            <!-- Left Sidebar - Sources & Files -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <h2 class="section-title"><i class="fa-solid fa-folder-open"></i> Sources</h2>
-
-                    <!-- File Upload Box -->
-                    <div class="upload-container" id="drop-zone">
-                        <input type="file" id="file-input" accept=".pdf" style="display: none;">
-                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                        <p class="upload-main-text">Drag & drop PDF here</p>
-                        <p class="upload-sub-text">or click to browse</p>
-                        <div class="upload-progress-container" id="upload-progress-container" style="display: none;">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="upload-progress-fill"></div>
-                            </div>
-                            <span class="progress-text" id="upload-progress-text">Processing PDF...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sidebar-section files-section">
-                    <h3 class="subsection-title">Loaded Documents</h3>
-                    <ul class="file-list" id="file-list">
-                        <li class="empty-list-placeholder">No documents uploaded yet.</li>
-                    </ul>
-                </div>
-
-                <div class="sidebar-footer">
-                    <button class="btn btn-secondary btn-block" id="btn-clear"><i class="fa-solid fa-rotate-left"></i>
-                        Reset Chat & Logs</button>
-                </div>
-            </aside>
-
-            <!-- Center Panel - Chat Q&A -->
-            <main class="chat-panel">
-                <div class="chat-header">
-                    <div class="chat-title-info">
-                        <h2>Grounded Q&A Interface</h2>
-                        <p>Responses are strictly constrained to uploaded document facts</p>
-                    </div>
-                </div>
-
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message system">
-                        <div class="avatar"><i class="fa-solid fa-robot"></i></div>
-                        <div class="message-content">
-                            <p>Welcome! Upload your PDF documents in the left panel. Once embedded, you can query their
-                                contents. The system will retrieve context directly from the PDF, cite the exact source
-                                page, and show retrieval traces.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chat-input-area">
-                    <div class="input-container">
-                        <input type="text" id="chat-input" placeholder="Ask a question about the document context..."
-                            autocomplete="off" disabled>
-                        <button id="btn-send" class="btn-send" disabled><i class="fa-solid fa-paper-plane"></i></button>
-                    </div>
-                </div>
-            </main>
-
-            <!-- Right Sidebar - Ragas Evaluation -->
-            <aside class="eval-panel">
-                <div class="eval-header">
-                    <h2><i class="fa-solid fa-gauge-high"></i> Ragas Metrics</h2>
-                    <p>Automated QA Quality & Grounding Evaluation</p>
-                </div>
-
-                <div class="eval-scores-grid">
-                    <!-- Faithfulness -->
-                    <div class="eval-card">
-                        <div class="radial-progress-wrapper">
-                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
-                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
-                                <circle class="circle-bar" id="score-faithfulness" cx="40" cy="40" r="34"
-                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#10b981"></circle>
-                            </svg>
-                            <span class="radial-value" id="val-faithfulness">-</span>
-                        </div>
-                        <div class="eval-meta">
-                            <h4>Faithfulness</h4>
-                            <p>Anti-Hallucination</p>
-                        </div>
-                    </div>
-
-                    <!-- Answer Relevance -->
-                    <div class="eval-card">
-                        <div class="radial-progress-wrapper">
-                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
-                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
-                                <circle class="circle-bar" id="score-relevance" cx="40" cy="40" r="34"
-                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#8b5cf6"></circle>
-                            </svg>
-                            <span class="radial-value" id="val-relevance">-</span>
-                        </div>
-                        <div class="eval-meta">
-                            <h4>Relevance</h4>
-                            <p>Query Matching</p>
-                        </div>
-                    </div>
-
-                    <!-- Context Precision -->
-                    <div class="eval-card">
-                        <div class="radial-progress-wrapper">
-                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
-                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
-                                <circle class="circle-bar" id="score-precision" cx="40" cy="40" r="34"
-                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#3b82f6"></circle>
-                            </svg>
-                            <span class="radial-value" id="val-precision">-</span>
-                        </div>
-                        <div class="eval-meta">
-                            <h4>Precision</h4>
-                            <p>Retriever Accuracy</p>
-                        </div>
-                    </div>
-
-                    <!-- Context Recall -->
-                    <div class="eval-card">
-                        <div class="radial-progress-wrapper">
-                            <svg class="radial-progress" width="80" height="80" viewBox="0 0 80 80">
-                                <circle class="circle-bg" cx="40" cy="40" r="34"></circle>
-                                <circle class="circle-bar" id="score-recall" cx="40" cy="40" r="34"
-                                    stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke="#eab308"></circle>
-                            </svg>
-                            <span class="radial-value" id="val-recall">-</span>
-                        </div>
-                        <div class="eval-meta">
-                            <h4>Context Recall</h4>
-                            <p>Retriever Depth</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="eval-action-box">
-                    <button class="btn btn-primary btn-block" id="btn-eval" disabled>
-                        <i class="fa-solid fa-calculator"></i> Run Ragas Evaluation
-                    </button>
-                    <p class="eval-helper-text">Ragas runs LLM-as-a-judge scorers over the current chat interactions to
-                        calculate scores. Requires Gemini credit.</p>
-                </div>
-
-                <div class="eval-loading-container" id="eval-loader" style="display: none;">
-                    <div class="dots-loader">
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                    </div>
-                    <span class="eval-loader-text">Evaluating Grounding Integrity...</span>
-                </div>
-            </aside>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fa-solid fa-shield-halved"></i> KnowFlow
         </div>
-    </div>
+        <div class="nav-actions">
+            <a href="bot.html" class="btn-primary nav-btn">Get Started</a>
+            <button class="icon-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+            <button class="icon-btn"><i class="fa-solid fa-bars"></i></button>
+        </div>
+    </nav>
 
-    <!-- Alert Banner for environment setup -->
-    <div id="env-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-triangle-exclamation"></i> Keys Configuration Required</h3>
-            </div>
-            <div class="modal-body">
-                <p>The system detected that your environment parameters are not configured.</p>
-                <p>Please edit the <strong>.env</strong> file in the project folder and supply valid credentials:</p>
-                <pre class="env-code-block">
-GEMINI_API_KEY=AIzaSy...
-PINECONE_API_KEY=pcsk_...
-PINECONE_ENVIRONMENT=us-east-1
-PINECONE_INDEX_NAME=document-index
-                </pre>
-                <div class="alert-box note">
-                    Once the .env file is updated, restart the server for changes to take effect.
+    <section class="hero">
+        <div class="hero-image-container laptop-mockup">
+            <div class="screen">
+                <div class="image-overlay"></div>
+                <img src="assets/images/1_dashboard_mockup.png" alt="Dashboard Preview" class="dashboard-preview" onerror="this.onerror=null; this.src='https://via.placeholder.com/1000x600/0a1930/ffffff?text=Dashboard+Preview';">
+                
+                <div class="hero-content">
+                    <h1>Document Context Retrieval Built for the Enterprise</h1>
+                    <a href="bot.html" class="btn-primary hero-btn">Get Started</a>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="window.location.reload()"><i
-                        class="fa-solid fa-arrows-rotate"></i> Retry Connection</button>
+            <div class="base"></div>
+        </div>
+    </section>
+
+    <section id="features" class="features-section">
+        <div class="section-header">
+            <h2>Everything you need for safe AI</h2>
+            <p>Our system strictly bounds the LLM to only answer what is factual within the documents.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <img src="assets/images/2_document_uploaded.png" alt="Zero Hallucination" class="feature-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/600x350/061121/ffffff?text=Feature+Image';">
+                <div class="feature-content">
+                    <div class="feature-title-wrap">
+                        <div class="icon-wrap"><i class="fa-solid fa-brain"></i></div>
+                        <h3>Zero Hallucination</h3>
+                    </div>
+                    <p>Strict system prompts force the LLM to reject any external world knowledge and only answer from retrieved chunks. Inline page citations are generated automatically.</p>
+                    <a href="#" class="learn-more">LEARN MORE &rarr;</a>
+                </div>
+            </div>
+            <div class="feature-card">
+                <img src="assets/images/5_eval_dashboard.png" alt="Continuous Ragas Evaluation" class="feature-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/600x350/061121/ffffff?text=Feature+Image';">
+                <div class="feature-content">
+                    <div class="feature-title-wrap">
+                        <div class="icon-wrap"><i class="fa-solid fa-chart-line"></i></div>
+                        <h3>Continuous Ragas Evaluation</h3>
+                    </div>
+                    <p>We integrate the Ragas framework into our CI/CD pipeline to continuously monitor Faithfulness, Answer Relevance, Context Recall, and Context Precision.</p>
+                    <a href="#" class="learn-more">LEARN MORE &rarr;</a>
+                </div>
+            </div>
+            <div class="feature-card">
+                <img src="assets/images/1_dashboard_mockup.png" alt="HIPAA & SOC 2 Compliant" class="feature-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/600x350/061121/ffffff?text=Feature+Image';">
+                <div class="feature-content">
+                    <div class="feature-title-wrap">
+                        <div class="icon-wrap"><i class="fa-solid fa-lock"></i></div>
+                        <h3>HIPAA & SOC 2 Compliant</h3>
+                    </div>
+                    <p>Automatically mask PHI before processing, with Row-Level Security ensuring user documents are strictly isolated in a secure VPC.</p>
+                    <a href="#" class="learn-more">LEARN MORE &rarr;</a>
+                </div>
+            </div>
+            <div class="feature-card">
+                <img src="assets/images/4_grounding_fallback.png" alt="Scalable Architecture" class="feature-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/600x350/061121/ffffff?text=Feature+Image';">
+                <div class="feature-content">
+                    <div class="feature-title-wrap">
+                        <div class="icon-wrap"><i class="fa-solid fa-network-wired"></i></div>
+                        <h3>Scalable Architecture</h3>
+                    </div>
+                    <p>Designed for bursts of concurrent traffic with smart LLM gateways, load balancing across providers, and asynchronous task queues.</p>
+                    <a href="#" class="learn-more">LEARN MORE &rarr;</a>
+                </div>
             </div>
         </div>
-    </div>
+        <div class="unlock-features-header">
+            <h2>Fill the Request Form to unlock more features</h2>
+        </div>
+        <div class="also-available-section">
+            <div class="pill-container">
+                <span class="pill"><i class="fa-solid fa-money-bill-trend-down"></i> API cost reduction</span>
+                <span class="pill"><i class="fa-solid fa-server"></i> Fallback system</span>
+                <span class="pill"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Context window limitation</span>
+                <span class="pill"><i class="fa-solid fa-lock-open"></i> AI jailbreaking</span>
+                <span class="pill"><i class="fa-solid fa-bolt"></i> Latency under load</span>
+            </div>
+        </div>
+    </section>
 
-    <script src="app.js"></script>
+    <!-- Request Demo Section -->
+    <section class="demo-section">
+        <div class="demo-container">
+            <!-- Left Side: Testimonial -->
+            <div class="demo-left">
+                <h2>See What Our Clients Say About Our Product</h2>
+                
+                <div class="testimonial-card">
+                    <div class="brand-logo">
+                        <img src="https://ik.imagekit.io/njzejkwo5/Screenshot%202026-07-14%20at%2012.46.41%E2%80%AFPM.png" alt="azr-labs">
+                    </div>
+                    
+                    <p class="quote">
+                        "We needed a document intelligence system that our healthcare and finance clients could actually trust — no hallucinations, no shortcuts. The developer delivered a RAG pipeline that grounds every answer in page-level citations and holds itself to a 95%+ faithfulness score before anything ships. On top of that, smart API key rotation and a fallback gateway kept the system running without downtime, while efficient retrieval cut our LLM API costs significantly compared to brute-forcing every query. It's the kind of engineering rigor that's hard to find."
+                    </p>
+                    
+                    <div class="author-info">
+                        <img src="https://ik.imagekit.io/njzejkwo5/james-smith.png" alt="james-smith" class="author-avatar">
+                        <div class="author-details">
+                            <strong>James Smith</strong>
+                            <span>Founder & Chief Architect, AZR LABS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Form -->
+            <div class="demo-right">
+                <div class="form-header">
+                    <h2>Request Form</h2>
+                    <p>Fill out this form, to unlock more feature</p>
+                </div>
+
+                <div id="thank-you-message" style="display: none; text-align: center; padding: 4rem 1rem;">
+                    <i class="fa-solid fa-circle-check" style="font-size: 4rem; color: #10b981; margin-bottom: 1.5rem;"></i>
+                    <h3 style="font-family: var(--font-heading); font-size: 2rem; color: #0f172a; margin-bottom: 1rem;">Thank you!</h3>
+                    <p style="color: #475569; font-size: 1.15rem;">We will unlock the feature for you shortly.</p>
+                </div>
+
+                <form class="request-form" id="feature-request-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Full Name <span>*</span></label>
+                            <input type="text" id="req-full-name" placeholder="John" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Firm Name <span>*</span></label>
+                            <input type="text" id="req-firm-name" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Job Title</label>
+                            <input type="text" id="req-job-title">
+                        </div>
+                        <div class="form-group">
+                            <label>Work Email <span>*</span></label>
+                            <input type="email" id="req-email" placeholder="johndoe@email.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>What is the problem your Enterprise faced while deploying the AI in production <span>*</span></label>
+                        <textarea id="req-problem" placeholder="Type Your Message.." required></textarea>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Unlock the Features Access</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('feature-request-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = 'Sending request...';
+            submitBtn.disabled = true;
+            
+            const fullName = document.getElementById('req-full-name').value;
+            const firmName = document.getElementById('req-firm-name').value;
+            const jobTitle = document.getElementById('req-job-title').value;
+            const email = document.getElementById('req-email').value;
+            const problem = document.getElementById('req-problem').value;
+            
+            // Use FormData to avoid CORS preflight issues and handle the submission robustly
+            const formData = new FormData();
+            formData.append('_subject', "New Feature Access Request from " + fullName);
+            formData.append('Name', fullName);
+            formData.append('Email', email);
+            formData.append('Firm', firmName);
+            formData.append('Job Title', jobTitle);
+            formData.append('Problem Faced', problem);
+            formData.append('_captcha', 'false'); // Disable captcha to prevent blocks
+
+            fetch("https://formsubmit.co/ajax/prasanthsh46@gmail.com", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.text(); // Parse as text to avoid crash if FormSubmit returns HTML
+            })
+            .then(text => {
+                // Success! Hide form and show Thank You message
+                document.getElementById('feature-request-form').style.display = 'none';
+                document.querySelector('.form-header').style.display = 'none';
+                document.getElementById('thank-you-message').style.display = 'block';
+            })
+            .catch(error => {
+                console.error(error);
+                submitBtn.innerText = originalText;
+                submitBtn.disabled = false;
+                alert('There was an error sending your request. Please check your connection and try again.');
+            });
+        });
+    </script>
 </body>
-
 </html>
