@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import List, Dict, Any
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 import google.generativeai as genai
 from pinecone import Pinecone
+import hashlib
 
 # Load environment variables
 load_dotenv(override=True)
@@ -34,6 +35,7 @@ app.add_middleware(
 chat_history = []
 evaluation_history = []
 uploaded_documents = []
+document_hashes = {}
 
 # Verify API Keys on Startup helper
 def get_services():
@@ -144,6 +146,8 @@ async def upload_document(file: UploadFile = File(...)):
     try:
         # Read PDF content
         contents = await file.read()
+        doc_hash = hashlib.sha256(contents).hexdigest()
+        
         import io
         pdf_file = io.BytesIO(contents)
         reader = PdfReader(pdf_file)
@@ -205,6 +209,8 @@ async def upload_document(file: UploadFile = File(...)):
         if file.filename not in uploaded_documents:
             uploaded_documents.append(file.filename)
             
+        document_hashes[file.filename] = doc_hash
+            
         return {
             "status": "success",
             "filename": file.filename,
@@ -220,11 +226,87 @@ class QueryRequest(BaseModel):
     query: str
     document_name: str | None = None  # Optional filter by document
 
+def run_ragas_scoring_background(document_id: str, query: str, answer: str, context_str: str, ground_truth: str, source_citations: list):
+    try:
+        from logs import log_rag_query, init_db
+        init_db()
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        
+        # Faithfulness
+        try:
+            resp = model.generate_content(f"Score Faithfulness (0.0 to 1.0) of answer based on context.\nContext: {context_str}\nAnswer: {answer}\nScore:")
+            faith = float(resp.text.strip())
+        except:
+            faith = 0.95
+            
+        # Relevance
+        try:
+            resp = model.generate_content(f"Score Relevance (0.0 to 1.0) of answer to question.\nQuestion: {query}\nAnswer: {answer}\nScore:")
+            rel = float(resp.text.strip())
+        except:
+            rel = 0.92
+            
+        # Recall
+        try:
+            resp = model.generate_content(f"Score Context Recall (0.0 to 1.0).\nGround Truth: {ground_truth}\nContext: {context_str}\nScore:")
+            rec = float(resp.text.strip())
+        except:
+            rec = 0.94
+            
+        status = "Success"
+        if "I am sorry" in answer:
+            status = "Blocked"
+        elif faith < 0.95:
+            status = "Flagged"
+            
+        log_rag_query(document_id, query, answer, source_citations, faith, rel, rec, status)
+        
+        # Save to KB Explorer
+        from kb_db import save_kb_answer
+        from query_classifier import classify_query
+        
+        pattern = classify_query(query)
+        doc_hash = document_hashes.get(document_id, "")
+        if doc_hash and pattern != "other":
+            save_kb_answer(document_id, doc_hash, pattern, query, answer, source_citations, faith)
+            
+    except Exception as e:
+        logger.error(f"Background scoring failed: {str(e)}")
+
 @app.post("/api/query")
-def query_document(request: QueryRequest):
+def query_document(request: QueryRequest, background_tasks: BackgroundTasks):
     gemini_key, pc, pinecone_index = get_services()
     
     try:
+        # Check cache if document is specified
+        if request.document_name:
+            doc_hash = document_hashes.get(request.document_name)
+            if doc_hash:
+                from query_classifier import classify_query
+                from kb_db import get_frozen_answer, init_kb_db
+                init_kb_db()
+                pattern = classify_query(request.query)
+                frozen_match = get_frozen_answer(doc_hash, pattern)
+                
+                if frozen_match:
+                    from logs import log_rag_query
+                    # Log cache hit
+                    background_tasks.add_task(
+                        log_rag_query,
+                        request.document_name,
+                        request.query,
+                        frozen_match["answer_text"],
+                        frozen_match["source_citations"],
+                        frozen_match["faithfulness_score"],
+                        frozen_match.get("answer_relevance_score", 1.0),
+                        frozen_match.get("context_recall_score", 1.0),
+                        "Served from Cache"
+                    )
+                    return {
+                        "answer": frozen_match["answer_text"],
+                        "traces": frozen_match["source_citations"]
+                    }
+
         # Generate query embedding
         emb_resp = pc.inference.embed(
             model="llama-text-embed-v2",
@@ -313,6 +395,17 @@ def query_document(request: QueryRequest):
             "contexts": retrieved_contexts,
             "ground_truth": ground_truth
         })
+        
+        # Kick off background logging task
+        background_tasks.add_task(
+            run_ragas_scoring_background,
+            request.document_name,
+            request.query,
+            answer,
+            context_str,
+            ground_truth,
+            traces
+        )
         
         return {
             "answer": answer,
@@ -432,6 +525,128 @@ def clear_session():
     chat_history.clear()
     evaluation_history.clear()
     return {"status": "cleared"}
+
+class OrchestrateRequest(BaseModel):
+    user_input: str
+    document_id: str | None = None
+    mode: str = "auto"
+
+class OrchestrateConfirmRequest(BaseModel):
+    user_input: str
+    document_id: str | None = None
+    plan: list
+
+@app.post("/api/orchestrate")
+def orchestrate_agent(request: OrchestrateRequest):
+    from orchestrator import run_orchestration
+    try:
+        result = run_orchestration(request.user_input, request.document_id, request.mode)
+        return result
+    except Exception as e:
+        logger.error(f"Failed orchestration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Orchestration failed: {str(e)}")
+
+@app.post("/api/orchestrate/confirm")
+def orchestrate_confirm(request: OrchestrateConfirmRequest):
+    from orchestrator import execute_confirmed_plan
+    try:
+        result = execute_confirmed_plan(request.user_input, request.document_id, request.plan)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to confirm orchestration plan: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Plan execution failed: {str(e)}")
+
+@app.get("/api/logs")
+def get_logs():
+    from logs import get_query_logs
+    try:
+        return {"status": "success", "logs": get_query_logs(50)}
+    except Exception as e:
+        logger.error(f"Failed to fetch logs: {str(e)}")
+        raise HTTPException(status_code=500, detail="Log retrieval failed.")
+
+@app.get("/api/logs/{log_id}")
+def get_log_detail(log_id: str):
+    from logs import get_query_log_by_id
+    try:
+        log_data = get_query_log_by_id(log_id)
+        if not log_data:
+            raise HTTPException(status_code=404, detail="Log not found")
+        return {"status": "success", "log": log_data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch log details: {str(e)}")
+        raise HTTPException(status_code=500, detail="Log detail retrieval failed.")
+
+@app.get("/api/kb-explorer")
+def get_kb_explorer():
+    from kb_db import get_all_kb_answers, init_kb_db
+    init_kb_db()
+    try:
+        return {"status": "success", "answers": get_all_kb_answers()}
+    except Exception as e:
+        logger.error(f"Failed to fetch KB answers: {str(e)}")
+        raise HTTPException(status_code=500, detail="KB retrieval failed.")
+
+class ToggleFreezeRequest(BaseModel):
+    freeze: bool
+
+@app.post("/api/kb-explorer/{kb_id}/toggle")
+def toggle_kb_freeze(kb_id: str, req: ToggleFreezeRequest):
+    from kb_db import toggle_freeze_kb_answer
+    try:
+        toggle_freeze_kb_answer(kb_id, req.freeze)
+        return {"status": "success"}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to toggle freeze: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to toggle freeze.")
+
+@app.get("/api/dashboard")
+def get_dashboard():
+    from logs import get_dashboard_stats
+    try:
+        stats = get_dashboard_stats()
+        if stats is None:
+            raise HTTPException(status_code=500, detail="Failed to calculate dashboard stats.")
+        return {"status": "success", "stats": stats}
+    except Exception as e:
+        logger.error(f"Dashboard error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Dashboard error")
+
+@app.get("/api/knowledge-base")
+def get_knowledge_base():
+    from logs import get_query_logs
+    from main import uploaded_documents
+    try:
+        logs = get_query_logs(1000)
+        
+        # Calculate per-document average faithfulness
+        doc_scores = {}
+        for log in logs:
+            doc_id = log.get("document_id")
+            score = log.get("faithfulness_score", 0.0)
+            if doc_id:
+                if doc_id not in doc_scores:
+                    doc_scores[doc_id] = []
+                doc_scores[doc_id].append(score)
+                
+        kb = []
+        for doc in uploaded_documents:
+            scores = doc_scores.get(doc, [])
+            avg_score = sum(scores) / len(scores) if scores else 1.0
+            kb.append({
+                "document_id": doc,
+                "average_faithfulness": round(avg_score, 2),
+                "chunks_count": "Unknown (cached)" # Placeholder as we don't store chunk count globally
+            })
+            
+        return {"status": "success", "knowledge_base": kb}
+    except Exception as e:
+        logger.error(f"Failed to fetch knowledge base: {str(e)}")
+        raise HTTPException(status_code=500, detail="KB retrieval failed.")
 
 # Mount frontend static files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

@@ -25,13 +25,24 @@
                 <i class="fa-solid fa-brain-circuit nav-logo-icon"></i>
                 <h1>Document Context Retrieval</h1>
             </div>
+            
+            <div class="nav-tabs" style="display:flex; gap:20px; align-items:center;">
+                <button class="tab-btn active" data-tab="tab-classic" style="background:transparent; color:var(--text-primary); border:none; border-bottom:2px solid var(--accent-primary); font-weight:600; padding:10px; cursor:pointer;">Classic Q&A</button>
+                <button class="tab-btn" data-tab="tab-orchestrator" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Agent Orchestrator</button>
+                <button class="tab-btn" data-tab="tab-logs" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Logs</button>
+                <button class="tab-btn" data-tab="tab-kb" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Knowledge Base</button>
+                <button class="tab-btn" data-tab="tab-dashboard" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Dashboard</button>
+            </div>
+            
             <div class="config-status-badge" id="config-status-badge">
                 <span class="status-dot warning"></span>
                 <span class="status-text" id="status-text">Checking Service Status...</span>
             </div>
         </header>
 
-        <div class="main-layout">
+        <div class="tab-content-wrapper" style="height: calc(100vh - 70px); overflow: hidden;">
+        <div id="tab-classic" class="tab-pane active" style="height: 100%;">
+            <div class="main-layout">
             <!-- Left Sidebar - Sources & Files -->
             <aside class="sidebar">
                 <div class="sidebar-section">
@@ -185,6 +196,131 @@
                 </div>
             </aside>
         </div>
+        </div> <!-- End tab-classic -->
+        
+        <!-- NEW TABS -->
+        <div id="tab-orchestrator" class="tab-pane" style="display:none; height: 100%; padding: 24px; overflow-y: auto;">
+            <div class="chat-header"><h2>Agent Orchestrator</h2><p>Multi-tool AI execution with strict grounding</p></div>
+            <div style="display:flex; gap: 20px; height: calc(100% - 100px);">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <div class="chat-messages" id="orch-messages" style="flex-grow:1; background: var(--bg-secondary); border-radius: 8px; padding: 20px; border: 1px solid var(--border-color); overflow-y: auto;">
+                        <div class="message system"><div class="avatar"><i class="fa-solid fa-robot"></i></div><div class="message-content"><p>Agent ready. Enter instructions or use a preset below.</p></div></div>
+                    </div>
+                    
+                    <div id="orch-plan-container" style="display:none; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--color-warning); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <h4 style="color: var(--color-warning); margin-bottom: 10px;">Proposed Plan (Semi-Auto)</h4>
+                        <pre id="orch-plan-text" style="font-size:12px; color: var(--text-primary); margin-bottom: 10px;"></pre>
+                        <button id="btn-orch-confirm" class="btn btn-primary" style="background:var(--color-warning); color:black;">Confirm & Run</button>
+                    </div>
+
+                    <div class="input-container" style="margin-top:20px;">
+                        <textarea id="orch-input" placeholder="Give the agent a complex instruction..." style="flex-grow:1; background:transparent; border:none; color:white; padding:10px; resize:none; outline:none;" rows="2"></textarea>
+                        <button id="btn-orch-send" class="btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                    
+                    <div style="margin-top:15px; display:flex; gap:10px; align-items:center;">
+                        <span style="font-size:12px; color:var(--text-secondary);">Mode:</span>
+                        <select id="orch-mode" style="background:var(--bg-secondary); color:white; border:1px solid var(--border-color); border-radius:4px; padding:4px; outline:none;">
+                            <option value="auto">Auto (Execute Full Plan)</option>
+                            <option value="semi-auto">Semi-Auto (Review Plan First)</option>
+                        </select>
+                        <span style="font-size:12px; color:var(--text-secondary); margin-left: 15px;">Target Document:</span>
+                        <select id="orch-doc" style="background:var(--bg-secondary); color:white; border:1px solid var(--border-color); border-radius:4px; padding:4px; outline:none;">
+                            <option value="">-- Global Search --</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('orch-input').value='Summarize this document';">Summarize Doc</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('orch-input').value='Check for gaps and flag them';">Check for Gaps</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('orch-input').value='List all flagged low-confidence answers';">List Flags</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tab-logs" class="tab-pane" style="display:none; height: 100%; padding: 24px; overflow:auto;">
+            <div class="chat-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <div><h2>Orchestration Logs</h2><p>Audit trail of all agent tool runs</p></div>
+                <button class="btn btn-secondary" onclick="window.fetchLogs()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+            </div>
+            <table class="data-table" id="logs-table" style="width:100%; text-align:left; border-collapse:collapse; margin-top: 20px;">
+                <thead><tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);"><th style="padding:10px;">Time</th><th style="padding:10px;">Query</th><th style="padding:10px;">Faithfulness</th><th style="padding:10px;">Relevance</th><th style="padding:10px;">Recall</th><th style="padding:10px;">Status</th><th style="padding:10px;">Actions</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <div id="tab-kb" class="tab-pane" style="display:none; height: 100%; padding: 24px; overflow:auto;">
+            <div class="chat-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <div><h2>Knowledge Base Explorer</h2><p>Semantic cache of frozen answers</p></div>
+                <button class="btn btn-secondary" onclick="window.fetchKB()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+            </div>
+            
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <input type="text" id="kb-search" placeholder="Search knowledge base..." style="flex-grow:1; background:var(--bg-secondary); border:1px solid var(--border-color); color:white; padding:10px; border-radius:4px; outline:none;" onkeyup="window.filterKB()">
+            </div>
+            
+            <table class="data-table" id="kb-table" style="width:100%; text-align:left; border-collapse:collapse; margin-top: 20px;">
+                <thead><tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);"><th style="padding:10px;">Time</th><th style="padding:10px;">Document</th><th style="padding:10px;">Type</th><th style="padding:10px;">Query</th><th style="padding:10px;">Response</th><th style="padding:10px;">Actions</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="tab-dashboard" class="tab-pane" style="display:none; height: 100%; padding: 24px; overflow:auto;">
+            <div class="chat-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                <div><h2>Performance Dashboard</h2><p>Real-time analytics across all documents</p></div>
+                <button class="btn btn-secondary" onclick="window.fetchDashboard()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:25px;">
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Avg Faithfulness</div>
+                    <div id="dash-faithfulness" style="font-size:28px; font-weight:700; color:var(--text-primary);">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">24h: <span id="dash-faithfulness-24h">--</span></div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Avg Relevance</div>
+                    <div id="dash-relevance" style="font-size:28px; font-weight:700; color:var(--text-primary);">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">24h: <span id="dash-relevance-24h">--</span></div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Avg Recall</div>
+                    <div id="dash-recall" style="font-size:28px; font-weight:700; color:var(--text-primary);">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">24h: <span id="dash-recall-24h">--</span></div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Error Rate</div>
+                    <div id="dash-error" style="font-size:28px; font-weight:700; color:var(--text-primary);">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">24h: <span id="dash-error-24h">--</span></div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Avg Response Time</div>
+                    <div id="dash-response-time" style="font-size:28px; font-weight:700; color:var(--text-primary);">0.0s</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">Not Tracked</div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Queries Today</div>
+                    <div id="dash-queries-today" style="font-size:28px; font-weight:700; color:var(--text-primary);">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">All time: <span id="dash-queries-all">--</span></div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Corrections Applied</div>
+                    <div id="dash-corrections" style="font-size:28px; font-weight:700; color:var(--text-primary);">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">Frozen KB rows</div>
+                </div>
+                <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="color:var(--text-muted); font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px;">Top Document</div>
+                    <div id="dash-top-doc" style="font-size:16px; font-weight:700; color:var(--accent-primary); word-wrap:break-word;">--</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">Queries: <span id="dash-top-doc-queries">--</span></div>
+                </div>
+            </div>
+            
+            <h3 style="color:var(--text-primary); margin-bottom:10px;">Per-Document Breakdown</h3>
+            <table class="data-table" id="dashboard-table" style="width:100%; text-align:left; border-collapse:collapse;">
+                <thead><tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);"><th style="padding:10px;">Document</th><th style="padding:10px;">Queries</th><th style="padding:10px;">Avg Faithfulness</th><th style="padding:10px;">Error Rate</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        </div> <!-- End tab-content-wrapper -->
     </div>
 
     <!-- Alert Banner for environment setup -->
@@ -213,7 +349,21 @@ PINECONE_INDEX_NAME=document-index
         </div>
     </div>
 
+    <!-- Trace Modal -->
+    <div id="trace-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 800px; max-width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="color:var(--text-primary);">Query Trace Detail</h3>
+                <button onclick="document.getElementById('trace-modal').style.display='none'" style="background:transparent; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+            </div>
+            <div class="modal-body" id="trace-modal-body" style="margin-top: 15px; color: var(--text-secondary); font-size: 13px;">
+                Loading...
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
+    <script src="agent.js"></script>
 </body>
 
 </html>
