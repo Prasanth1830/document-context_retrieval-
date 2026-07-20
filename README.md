@@ -122,3 +122,25 @@ To support bursts of concurrent traffic (e.g., 50+ simultaneous users) without h
 ### 3. Horizontal Scaling & Asynchronous Queuing (Smoothing Traffic Spikes)
 * **How it works:** I can decouple the web interface from the heavy retrieval/generation engine. Incoming questions are placed into a lightweight queue (e.g., Redis Queue or Celery), which are then picked up and processed by multiple parallel workers.
 * **Why it helps:** Instead of the system being overwhelmed by sudden traffic spikes, requests are organized in a queue and processed smoothly. I can scale the number of background workers up or down dynamically depending on active usage.
+
+---
+
+## 7. Advanced Agentic Features (Recent Additions)
+
+To elevate the application from a simple Q&A tool to a robust AI Agent, several advanced features were integrated into the architecture:
+
+### 1. Agent Orchestrator
+*   **What it does:** Uses LLM function-calling to route user queries to the most appropriate tool (e.g., standard document retrieval, generating a full-document summary, or checking available documents).
+*   **Why it matters:** It gives the AI autonomy to choose the best strategy for answering complex or ambiguous requests, rather than relying on a rigid, single-path execution.
+
+### 2. Comprehensive Audit Logs
+*   **What it does:** Automatically scores every generated answer in the background (evaluating Faithfulness, Relevance, and Recall) and logs the query, source citations, and scores into a persistent SQLite database.
+*   **Why it matters:** Provides a transparent audit trail of what users are asking and exactly how the AI is responding, which is critical for compliance and trust.
+
+### 3. Knowledge Base Explorer (Semantic Caching)
+*   **What it does:** Classifies incoming queries by pattern (e.g., "summarize", "key risks") and caches high-quality, highly faithful answers. Admins can "Freeze" these canonical answers.
+*   **Why it matters:** Serves repeated or common questions instantly from the cache, drastically reducing LLM token costs and response times while guaranteeing consistency.
+
+### 4. Performance Dashboard
+*   **What it does:** A real-time, read-only analytics dashboard aggregating data from the audit logs. It visualizes average evaluation scores, error rates, and query volume across the entire system and broken down per document.
+*   **Why it matters:** Allows administrators to monitor system health and pinpoint exactly which documents are causing poor or flagged AI responses at a glance.
