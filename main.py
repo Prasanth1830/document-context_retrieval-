@@ -261,14 +261,14 @@ def run_ragas_scoring_background(document_id: str, query: str, answer: str, cont
             
         log_rag_query(document_id, query, answer, source_citations, faith, rel, rec, status)
         
-        # Save to KB Explorer
-        from kb_db import save_kb_answer
+        # Save to KB Explorer Cache
+        from kb_db import save_kb_answer, init_kb_db
         from query_classifier import classify_query
         
+        init_kb_db()
         pattern = classify_query(query)
         doc_hash = document_hashes.get(document_id, "")
-        if doc_hash and pattern != "other":
-            save_kb_answer(document_id, doc_hash, pattern, query, answer, source_citations, faith)
+        save_kb_answer(document_id, doc_hash, pattern, query, answer, source_citations, faith)
             
     except Exception as e:
         logger.error(f"Background scoring failed: {str(e)}")
@@ -306,34 +306,34 @@ def query_document(request: QueryRequest, background_tasks: BackgroundTasks):
                 "traces": []
             }
 
-        # 2. Check cache if document is specified
+        # 2. Check DB cache if document is specified
         if request.document_name:
-            doc_hash = document_hashes.get(request.document_name)
-            if doc_hash:
-                from query_classifier import classify_query
-                from kb_db import get_frozen_answer, init_kb_db
-                init_kb_db()
-                pattern = classify_query(request.query)
-                frozen_match = get_frozen_answer(doc_hash, pattern)
-                
-                if frozen_match:
-                    from logs import log_rag_query
-                    # Log cache hit
-                    background_tasks.add_task(
-                        log_rag_query,
-                        request.document_name,
-                        request.query,
-                        frozen_match["answer_text"],
-                        frozen_match["source_citations"],
-                        frozen_match["faithfulness_score"],
-                        frozen_match.get("answer_relevance_score", 1.0),
-                        frozen_match.get("context_recall_score", 1.0),
-                        "Served from Cache"
-                    )
-                    return {
-                        "answer": frozen_match["answer_text"],
-                        "traces": frozen_match["source_citations"]
-                    }
+            doc_hash = document_hashes.get(request.document_name, "")
+            from query_classifier import classify_query
+            from kb_db import get_cached_answer, init_kb_db
+            init_kb_db()
+            pattern = classify_query(request.query)
+            cached_match = get_cached_answer(request.document_name, doc_hash, pattern, request.query)
+            
+            if cached_match:
+                from logs import log_rag_query
+                # Log cache hit
+                background_tasks.add_task(
+                    log_rag_query,
+                    request.document_name,
+                    request.query,
+                    cached_match["answer_text"],
+                    cached_match["source_citations"],
+                    cached_match.get("faithfulness_score", 0.98),
+                    cached_match.get("answer_relevance_score", 1.0),
+                    cached_match.get("context_recall_score", 1.0),
+                    "Served from DB Cache (0 LLM Cost)"
+                )
+                return {
+                    "answer": cached_match["answer_text"],
+                    "traces": cached_match["source_citations"],
+                    "served_from_cache": True
+                }
 
         # Generate query embedding
         emb_resp = pc.inference.embed(
