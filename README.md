@@ -125,7 +125,7 @@ To support bursts of concurrent traffic (e.g., 50+ simultaneous users) without h
 
 ---
 
-## 7. Advanced Agentic Features (Recent Additions)
+## 7. Advanced Agentic Features 
 
 To elevate the application from a simple Q&A tool to a robust AI Agent, several advanced features were integrated into the architecture:
 
@@ -144,3 +144,8 @@ To elevate the application from a simple Q&A tool to a robust AI Agent, several 
 ### 4. Performance Dashboard
 *   **What it does:** A real-time, read-only analytics dashboard aggregating data from the audit logs. It visualizes average evaluation scores, error rates, and query volume across the entire system and broken down per document.
 *   **Why it matters:** Allows administrators to monitor system health and pinpoint exactly which documents are causing poor or flagged AI responses at a glance.
+
+### 5. Knowledge Transfer (Human-in-the-Loop Safety Queue)
+*   **What it does:** Instantly detects when a user asks about high-risk topics (like clinical medical advice, financial decisions, emotional distress, or attempts to bypass AI guardrails). It immediately holds the response, flags the query, and routes it to a secure admin queue for a human to answer.
+*   **Why it matters:** Provides an ironclad safety net that sets this product apart from standard AI bots. It guarantees absolute compliance and safety in high-stakes fields by ensuring that life-critical, legal, or financial decisions are always answered by a qualified human, not a hallucinating AI.
+

@@ -32,6 +32,7 @@
                 <button class="tab-btn" data-tab="tab-logs" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Logs</button>
                 <button class="tab-btn" data-tab="tab-kb" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Knowledge Base</button>
                 <button class="tab-btn" data-tab="tab-dashboard" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Dashboard</button>
+                <button class="tab-btn" data-tab="tab-kt" style="background:transparent; color:var(--text-secondary); border:none; border-bottom:2px solid transparent; font-weight:600; padding:10px; cursor:pointer;">Knowledge Transfer</button>
             </div>
             
             <div class="config-status-badge" id="config-status-badge">
@@ -319,6 +320,49 @@
                 <thead><tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);"><th style="padding:10px;">Document</th><th style="padding:10px;">Queries</th><th style="padding:10px;">Avg Faithfulness</th><th style="padding:10px;">Error Rate</th></tr></thead>
                 <tbody></tbody>
             </table>
+        </div>
+        <div id="tab-kt" class="tab-pane" style="display:none; height: 100%; padding: 40px; overflow:auto;">
+            <div style="max-width: 900px; margin: 0 auto;">
+                
+                <!-- Header -->
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 30px;">
+                    <div>
+                        <div style="color: var(--color-primary, #00BFFF); font-size: 11px; font-weight: bold; letter-spacing: 1.5px; margin-bottom: 8px; display:flex; align-items:center; gap: 8px;">
+                            <span style="display:inline-block; width:6px; height:6px; background:var(--color-primary, #00BFFF); border-radius:50%;"></span>
+                            HUMAN-IN-THE-LOOP &middot; LIVE
+                        </div>
+                        <h2 style="font-size: 28px; margin-bottom: 8px; color: white;">Knowledge Transfer</h2>
+                        <p style="color: #8b949e; font-size: 14px; max-width: 600px; line-height: 1.5;">Queries the bot won't answer on its own &mdash; dosage, diagnosis, financial commitments, or visible distress &mdash; routed here for a person to confirm before the user sees a reply.</p>
+                    </div>
+                    <div style="display:flex; gap: 12px; margin-bottom: 4px;">
+                        <div style="border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: #8b949e; display:flex; align-items:center; gap: 8px; background: rgba(255,255,255,0.02);">
+                            <span style="display:inline-block; width:6px; height:6px; background:#ff4444; border-radius:50%;"></span>
+                            Critical <span id="kt-count-p1" style="color:white; font-weight:bold; margin-left:4px;">0</span>
+                        </div>
+                        <div style="border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: #8b949e; display:flex; align-items:center; gap: 8px; background: rgba(255,255,255,0.02);">
+                            <span style="display:inline-block; width:6px; height:6px; background:#ffaa00; border-radius:50%;"></span>
+                            High <span id="kt-count-p2" style="color:white; font-weight:bold; margin-left:4px;">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 24px; margin-bottom: 24px;">
+                    <div style="display:flex; gap: 12px;">
+                        <button class="kt-filter-btn active" data-filter="all" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor:pointer;">All</button>
+                        <button class="kt-filter-btn" data-filter="P1" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #8b949e; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor:pointer; transition: all 0.2s;">P1 &middot; Critical</button>
+                        <button class="kt-filter-btn" data-filter="P2" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #8b949e; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor:pointer; transition: all 0.2s;">P2 &middot; High</button>
+                    </div>
+                    <div style="border: 1px dashed rgba(255,255,255,0.2); padding: 4px 10px; font-size: 10px; color: #8b949e; letter-spacing: 1px; border-radius: 4px; font-family: monospace;">DEMO DATA</div>
+                </div>
+                
+                <div style="color: #8b949e; font-size: 11px; font-weight: bold; letter-spacing: 1.5px; margin-bottom: 16px;">PENDING (<span id="kt-pending-total">0</span>)</div>
+                
+                <div id="kt-cards-container" style="display:flex; flex-direction:column; gap: 16px; padding-bottom: 40px;">
+                    <!-- Cards will be injected here -->
+                </div>
+                
+            </div>
         </div>
         </div> <!-- End tab-content-wrapper -->
     </div>

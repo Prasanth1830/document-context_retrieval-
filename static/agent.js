@@ -419,10 +419,154 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    let currentKTFilter = 'all';
+
+    document.querySelectorAll('.kt-filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.kt-filter-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'transparent';
+                b.style.color = '#8b949e';
+            });
+            e.target.classList.add('active');
+            e.target.style.background = 'rgba(255,255,255,0.05)';
+            e.target.style.color = 'white';
+            
+            currentKTFilter = e.target.getAttribute('data-filter');
+            window.fetchKTQueue();
+        });
+    });
+
+    window.fetchKTQueue = async () => {
+        const container = document.getElementById('kt-cards-container');
+        if (!container) return; // UI might not be loaded yet
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#8b949e;">Loading KT Queue...</div>';
+        
+        try {
+            const res = await fetch('/api/kt-queue');
+            const data = await res.json();
+            
+            if (!data.escalations) return;
+            
+            let filtered = data.escalations;
+            if (currentKTFilter !== 'all') {
+                filtered = data.escalations.filter(e => e.severity === currentKTFilter);
+            }
+            
+            // Update counts
+            const p1Count = data.escalations.filter(e => e.severity === 'P1').length;
+            const p2Count = data.escalations.filter(e => e.severity === 'P2').length;
+            document.getElementById('kt-count-p1').textContent = p1Count;
+            document.getElementById('kt-count-p2').textContent = p2Count;
+            document.getElementById('kt-pending-total').textContent = filtered.length;
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px; color:#8b949e; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.1);">No pending escalations match this filter!</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            const now = new Date();
+            
+            filtered.forEach(esc => {
+                const ts = new Date(esc.timestamp);
+                const diffMs = now - ts;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffSecs = Math.floor((diffMs % 60000) / 1000);
+                
+                let timeBadge = '';
+                if (diffMins > 120) {
+                     timeBadge = `<span style="border: 1px solid #ff4444; color: #ff4444; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(255,68,68,0.1);">SLA breached</span>`;
+                } else if (diffMins > 0) {
+                     timeBadge = `<span style="border: 1px solid var(--color-success); color: var(--color-success); padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(0,255,136,0.1);">${diffMins}m ${diffSecs}s elapsed</span>`;
+                } else {
+                     timeBadge = `<span style="border: 1px solid var(--color-success); color: var(--color-success); padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(0,255,136,0.1);">${diffSecs}s elapsed</span>`;
+                }
+                
+                const isP1 = esc.severity === 'P1';
+                const borderColor = isP1 ? '#ff4444' : '#ffaa00';
+                const sevBg = isP1 ? 'rgba(255,68,68,0.2)' : 'rgba(255,170,0,0.2)';
+                
+                const card = document.createElement('div');
+                card.style.background = 'rgba(255,255,255,0.03)';
+                card.style.border = `1px solid rgba(255,255,255,0.05)`; // default border
+                card.style.borderLeft = `3px solid ${borderColor}`;
+                card.style.borderRadius = '10px';
+                card.style.padding = '20px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '16px';
+                card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <span style="background:${sevBg}; color:${borderColor}; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; letter-spacing: 0.5px;">${esc.severity}</span>
+                            <span style="border:1px solid rgba(255,255,255,0.1); color:#8b949e; padding:3px 8px; border-radius:4px; font-size:11px; letter-spacing:0.5px;">${esc.category}</span>
+                            ${timeBadge}
+                        </div>
+                        <div style="color:#8b949e; font-family:monospace; font-size:12px;">${esc.document_name}</div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color:white; font-size:18px; margin: 0 0 6px 0; font-weight: 600;">${esc.user_query}</h3>
+                        <p style="color:#8b949e; font-size:13px; margin:0;"><strong>Why escalated:</strong> ${esc.reason}</p>
+                    </div>
+                    
+                    <div style="position:relative; width:100%; display:flex; gap:12px;">
+                        <textarea id="kt-ans-${esc.id}" placeholder="Type the answer the user should see..." style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; padding:12px; min-height:44px; height: 44px; resize:vertical; font-family:inherit; font-size:14px;"></textarea>
+                        <button class="btn-send-ans" data-id="${esc.id}" style="background:var(--color-primary, #00BFFF); color:#000; border:none; padding:0 24px; font-weight:bold; border-radius:8px; cursor:pointer; font-size:14px; align-self:flex-start; height:44px; transition:opacity 0.2s;">Send answer</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            
+            document.querySelectorAll('.btn-send-ans').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const ansInput = document.getElementById(`kt-ans-${id}`);
+                    const answer = ansInput.value.trim();
+                    
+                    if (!answer) return;
+                    
+                    e.target.textContent = "Sending...";
+                    e.target.style.opacity = '0.7';
+                    e.target.disabled = true;
+                    
+                    try {
+                        const r = await fetch(`/api/kt-queue/${id}/resolve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ human_answer: answer })
+                        });
+                        if (r.ok) {
+                            window.fetchKTQueue();
+                        } else {
+                            alert("Failed to send.");
+                            e.target.textContent = "Send answer";
+                            e.target.style.opacity = '1';
+                            e.target.disabled = false;
+                        }
+                    } catch (err) {
+                        alert(err.message);
+                        e.target.textContent = "Send answer";
+                        e.target.style.opacity = '1';
+                        e.target.disabled = false;
+                    }
+                });
+            });
+            
+        } catch (e) {
+            container.innerHTML = `<div style="text-align:center; color:#ff4444; padding:20px;">Error: ${e.message}</div>`;
+        }
+    };
+
     // Initial fetch of logs and kb
     window.fetchLogs();
     window.fetchKB();
     window.fetchDashboard();
+    window.fetchKTQueue();
     
     // Auto-refresh Dashboard every 30s
     setInterval(() => {

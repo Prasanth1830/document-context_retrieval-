@@ -278,7 +278,35 @@ def query_document(request: QueryRequest, background_tasks: BackgroundTasks):
     gemini_key, pc, pinecone_index = get_services()
     
     try:
-        # Check cache if document is specified
+        # 1. Check Risk Guardrail first
+        from risk_guardrail import assess_risk
+        from knowledge_transfer_db import init_kt_db, add_escalation
+        
+        # Determine document type heuristic
+        doc_type = "general"
+        if request.document_name:
+            if "fintech" in request.document_name.lower() or "finance" in request.document_name.lower() or "report" in request.document_name.lower():
+                doc_type = "fintech"
+            elif "medical" in request.document_name.lower() or "health" in request.document_name.lower() or "lab" in request.document_name.lower():
+                doc_type = "medical"
+                
+        risk = assess_risk(request.query, doc_type)
+        if risk.is_escalation_required:
+            init_kt_db()
+            add_escalation(
+                user_query=request.query,
+                category=risk.category.value,
+                severity=risk.severity.value,
+                matched_patterns=risk.matched_patterns,
+                reason=risk.reason,
+                document_name=request.document_name or "Unknown Document"
+            )
+            return {
+                "answer": risk.holding_message,
+                "traces": []
+            }
+
+        # 2. Check cache if document is specified
         if request.document_name:
             doc_hash = document_hashes.get(request.document_name)
             if doc_hash:
@@ -615,6 +643,30 @@ def get_dashboard():
     except Exception as e:
         logger.error(f"Dashboard error: {str(e)}")
         raise HTTPException(status_code=500, detail="Dashboard error")
+
+# Knowledge Transfer API endpoints
+@app.get("/api/kt-queue")
+def get_kt_queue():
+    from knowledge_transfer_db import init_kt_db, get_pending_escalations
+    init_kt_db()
+    try:
+        return {"status": "success", "escalations": get_pending_escalations()}
+    except Exception as e:
+        logger.error(f"Failed to fetch KT queue: {str(e)}")
+        raise HTTPException(status_code=500, detail="KT retrieval failed.")
+
+class ResolveKTRequest(BaseModel):
+    human_answer: str
+
+@app.post("/api/kt-queue/{kt_id}/resolve")
+def resolve_kt(kt_id: str, req: ResolveKTRequest):
+    from knowledge_transfer_db import resolve_escalation
+    try:
+        resolve_escalation(kt_id, req.human_answer)
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Failed to resolve KT ticket: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to resolve ticket.")
 
 @app.get("/api/knowledge-base")
 def get_knowledge_base():
